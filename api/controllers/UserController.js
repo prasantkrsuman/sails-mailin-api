@@ -195,18 +195,21 @@ module.exports = {
      * @return: UserId in json format
      */
     post: function (req, res, next) {
-    	
+
     	var params = req.params.all();
     	//console.log(JSON.stringify(params));
     	var email = req.param('email');
     	var attributes = JSON.parse(req.param('attributes'));
     	var listid = req.param('listid'); //convert string to array
-    	var listid = listid.split(",");
+    	//var listid = listid.split(",");
     	var listid_unlink = req.param('listid_unlink');
-    	var listid_unlink = listid_unlink.split(",");
+    	//var listid_unlink = listid_unlink.split(",");
     	var blacklisted = req.param('blacklisted');
     	var blacklisted_sms = req.param('blacklisted_sms');
     	var errorMsg;
+    	var user_data, listArr = {};
+
+    	console.log(listid);
 
     	//console.log('postAction------>'+ typeof Object.keys(attributes));
     	if(!email && !attributes.SMS){
@@ -226,23 +229,56 @@ module.exports = {
 		//if(listid!=='undefined' & listid_unlink!=='undefined' & Array.intersect(listid, listid_unlink)){
 		// 	return res.json(500, apilogs.jsonResponse(req,res,"failure","List id & unlink list id can not be same", []));
 		// }
-	
-    	errorMsg = apilogs.getUserCountDetail(req, res, 1);
-    	console.log(errorMsg+'##########');
-        if(errorMsg != false){
-        	console.log('user limit exceded ---------');
-        	return res.json(500, apilogs.jsonResponse(req, res, "failure", errorMsg, []));
-        }
-        else{
-        	console.log('create/update user --------');
-        }
+		var criteria = [{"email": email}, {}];
+		
+		var db_name = unique_db_name = req.data.cdb.db_name;
+		var db_host = req.data.cdb.db_host
+
+    	UserCreateUpdate = apilogs.getUserCountDetail(req, res, 1 , function(err , data){
+
+    		//console.log(data);
+    		if(err){
+    			console.log('Some Error Encountered' + err);
+				return err;
+    		}
+    		if(data){
+    			console.log('user limit exceded ---------');
+	        	return res.json(500, apilogs.jsonResponse(req, res, "failure", data, []));
+    		}
+	        else{
+	        	//find user, if found update record, else create it
+	        	User.getOne(db_host, db_name , criteria, function(err, users_data){
+	        		user_data = users_data;
+	        		if(user_data!=null){ //update user
+	        			console.log('--- update user ---');
+	        			return res.json(200, apilogs.jsonResponse(req,res,"success","Email was updated successfully.", []));
+	        	
+	        		}
+	        		else{ //create user
+
+	        			//match input listd ids in list collection, & add all those found
+
+	        			var listCriteria = [{'id': { '$in': listid }, 'list_parent': {'$ne': 0}}, {'id':1}];
+
+				    	Lists.getAll(db_host, db_name , listCriteria, function(err, list_data){
+							list_data.each(function(err, data){
+								console.log('------>'+data);
+								if (data) {
+									//console.log(data.id);
+									listArr = data['url'];
+								}
+							});
+						});	
+				    	console.log(listArr+'@@@@@');
 
 
+	        			console.log('--- create user ---');
+	        			return res.json(200, apilogs.jsonResponse(req,res,"success","User created successfully.", []));
+	        		}
+	        	});
+	        }
 
-
-
-    	console.log('postAction');
-		return res.json(200, apilogs.jsonResponse(req,res,"success","post action", []));
+    	});
 
     }
 

@@ -147,10 +147,10 @@ module.exports = {
 	/**
    	* Function to check the user limit for particular plan type
    	*/
-	getUserCountDetail: function(req, res, total_users_list) {
+	getUserCountDetail: function(req, res, total_users_list , cb) {
 		
 		//console.log(JSON.stringify(req.data));
-		var total_users_db, user_limit,quota;
+		var total_users_db, user_limit, quota;
 		var errorMsg = "";				
 
 		async.series([
@@ -168,73 +168,50 @@ module.exports = {
 								if (err) {
 									console.log(err);
 									console.log("Error:Sorry!Something went Wrong");
-									callback('Unable to get Users Count.');
+									//callback('Unable to get Users Count.');
 								}else {
 									total_users_db = user_data; // do count
 									console.log('***Users count: '+total_users_db);
 									callback();					
 								}
 							});
-
-							// if(user_limit <= total_users_db ){
-							// 	errorMsg  = "You have already reached your maximum number of users quota. Upgrade your plan here. <a href='https://www.sendinblue.com/pricing'>https://www.sendinblue.com</a>";
-							// 	console.log(errorMsg);
-							// 	callback(errorMsg);
-							// }
-							// else if((total_users_list + total_users_db ) > user_limit ){
-							// 	quota = user_limit - total_users_db;
-							// 	quota = {'quota':quota};
-							// 	//return quota;
-							// 	callback();
-							// }
-
 						}
 						else{
 							errorMsg  = "You are trying to upload more users than your quota, list will not be uploaded.";
-							console.log(errorMsg);
-							callback(errorMsg);
+							callback();
 						}
 					}
 					else{
-						callback(); //for other plan types
-					}
-				}
-				else{
-					errorMsg  = "You are trying to upload more users than your quota, list will not be uploaded.";
-					//console.log(errorMsg);
-					callback(errorMsg);
-				}
-			},
-			function(callback,errorMsg) {
-				
-				if(errorMsg){
-					callback(errorMsg);
-				}
-				else if (user_limit && total_users_db){
-					if(user_limit <= total_users_db ){
-						errorMsg  = "You have already reached your maximum number of users quota. Upgrade your plan here. <a href='https://www.sendinblue.com/pricing'>https://www.sendinblue.com</a>";
-						//console.log(errorMsg);
-						callback(errorMsg);
-					}
-					else if((total_users_list + total_users_db ) > user_limit ){
-						quota = user_limit - total_users_db;
-						quota = {'quota':quota};
-						//return quota;
+						errorMsg ='';
 						callback();
 					}
 				}
 				else{
-					callback(); //for other plan types
-					//console.log('ooooooooo');
+					errorMsg  = "You are trying to upload more users than your quota, list will not be uploaded.";
+					callback();
+				}
+			},
+			function(callback) {
+					
+				if (user_limit && total_users_db){
+					if(user_limit <= total_users_db ){
+						errorMsg  = "You have already reached your maximum number of users quota. Upgrade your plan here. <a href='https://www.sendinblue.com/pricing'>https://www.sendinblue.com</a>";
+					}
+					else if((total_users_list + total_users_db ) > user_limit ){
+						quota = user_limit - total_users_db;
+						quota = {'quota':quota};
+					}
+
+					cb(null , errorMsg);
+				}
+				else{
+
+					cb(null);
 				}
 			}
 		], function(err) {
-			if (err) {
-				console.log('**********'+err+'**********');
-				return err;
-			}else{
-				return '';
-			}
+
+			return cb(err);
 
 		});
 
