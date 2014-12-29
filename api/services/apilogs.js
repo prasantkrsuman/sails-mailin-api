@@ -160,7 +160,7 @@ module.exports = {
 						if(req.data.config.user_limit!== undefined){		
 
 							user_limit = req.data.config.user_limit;
-							console.log('***Config Users count: '+user_limit);
+							//console.log('***Config Users count: '+user_limit);
 
 							//connect to users collection & count total users
 							var data = {};
@@ -171,7 +171,7 @@ module.exports = {
 									//callback('Unable to get Users Count.');
 								}else {
 									total_users_db = user_data; // do count
-									console.log('***Users count: '+total_users_db);
+									//console.log('***Users count: '+total_users_db);
 									callback();					
 								}
 							});
@@ -215,7 +215,50 @@ module.exports = {
 
 		});
 
-	}
+	},
+
+	/**
+	* funtion to create email tags field values(array)
+	*/
+	email_tag: function(email){
+		if(email){
+
+		var parts = email.split('@', 2);
+		var email = parts[0];
+		var domain  = parts[1];
+			return domain;
+		} else{
+			return domain = '';
+		}
+	},
+
+
+	/**
+	* funtion to varify country code in SMS
+	*/
+	varifyCountry: function(mobile, cb) {
+        if(mobile){
+            var filter = [{"status": 1}, {"_id":0, "code":1}];
+          
+            SmsPrices.getCountryCode(filter, function(err, allcodes){
+				allcodes.each(function(err, data){
+					//console.log(data);
+					if (data) {
+						//console.log(data.code);
+						var code = data.code.replace("+", "");
+						mobile = mobile.substring(0, 2);
+						if(mobile==code) {
+						    cb(null , 1);
+						}
+					}
+				});
+			});				 
+        }
+        else{ 
+        	cb(null, 0);
+        }
+    }
+
 
 
 

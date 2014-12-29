@@ -22,7 +22,7 @@ module.exports = {
 					return user_cb(err,null);
 				}
 				else {
-					console.log('Connected to lists collection of db: ' + unique_db_name);
+					console.log('Connected to list collection of db: ' + unique_db_name);
 					return user_cb(null, list_data); 
 				}
 			});
@@ -42,7 +42,7 @@ module.exports = {
 					return user_cb(err,null);
 				}
 				else {
-					console.log('Connected to lists collection of db: ' + unique_db_name);
+					console.log('Connected to list collection of db: ' + unique_db_name);
 					return user_cb(null, list_data); 
 				}
 			});

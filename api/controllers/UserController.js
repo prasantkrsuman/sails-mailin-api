@@ -200,16 +200,20 @@ module.exports = {
     	//console.log(JSON.stringify(params));
     	var email = req.param('email');
     	var attributes = JSON.parse(req.param('attributes'));
-    	var listid = req.param('listid'); //convert string to array
-    	//var listid = listid.split(",");
-    	var listid_unlink = req.param('listid_unlink');
-    	//var listid_unlink = listid_unlink.split(",");
-    	var blacklisted = req.param('blacklisted');
-    	var blacklisted_sms = req.param('blacklisted_sms');
-    	var errorMsg;
-    	var user_data, listArr = {};
+    	var listid = JSON.parse("{\"listid\":" + req.param('listid') + "}"); //convert string to array
+    	var listid_unlink = JSON.parse("{\"listid_unlink\":" + req.param('listid_unlink') + "}"); //convert string to array
+    	var blacklisted = parseInt(req.param('blacklisted'));
+    	var blacklisted_sms = parseInt(req.param('blacklisted_sms'));
 
-    	console.log(listid);
+    	var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+		var date = new Date();
+
+    	var errorMsg, smsMsg, FinalMsg, SMSAttr;
+    	var user_data, smsUser, listArr = {};
+    	//var listArr = [];
+
+    	console.log('^^^^'+JSON.stringify(listid.listid));
+    	console.log('^^^^'+ typeof listid);
 
     	//console.log('postAction------>'+ typeof Object.keys(attributes));
     	if(!email && !attributes.SMS){
@@ -229,7 +233,13 @@ module.exports = {
 		//if(listid!=='undefined' & listid_unlink!=='undefined' & Array.intersect(listid, listid_unlink)){
 		// 	return res.json(500, apilogs.jsonResponse(req,res,"failure","List id & unlink list id can not be same", []));
 		// }
-		var criteria = [{"email": email}, {}];
+
+		if(email){
+			var criteria = [{"email": email}, {}];
+		} else if (!email && attributes.SMS){
+			email = attributes.SMS+'@mailin-sms.com'
+			var criteria = [{"email": email}, {}];
+		}
 		
 		var db_name = unique_db_name = req.data.cdb.db_name;
 		var db_host = req.data.cdb.db_host
@@ -250,31 +260,168 @@ module.exports = {
 	        	User.getOne(db_host, db_name , criteria, function(err, users_data){
 	        		user_data = users_data;
 	        		if(user_data!=null){ //update user
-	        			console.log('--- update user ---');
-	        			return res.json(200, apilogs.jsonResponse(req,res,"success","Email was updated successfully.", []));
-	        	
+
+	        			console.log('--- update user ---'+JSON.stringify(user_data.attributes));
+
+	     //    			//match input listd ids in list collection, & add all those found
+	     //    			var listCriteria = [{'id': { '$in': listid.listid }, 'list_parent': {'$ne': 0}}, {'id':1}];
+
+				  //   	Lists.getAll(db_host, db_name , listCriteria, function(err, list_data){
+						// 	//console.log(list_data);
+						// 	list_data.each(function(err, data){
+						// 		//console.log(JSON.stringify(listCriteria));
+						// 		//console.log(data);
+						// 		if (data) {
+						// 			//console.log(data.id);
+						// 			listArr = data['id'];
+						// 			console.log(listArr+'@@@@@');
+						// 		}
+						// 	});
+						// });	
+
+	     //    			//if SMS, check if already exist, if yes, create new user leaving SMS with a msg, if not add the value in sms attrinute
+						// //attributes.SMS
+						// var smsCriteria = [{"attributes.SMS": attributes.SMS}, {}];
+						// User.getOne(db_host, db_name , smsCriteria, function(err, smsuser_data){
+						// 	smsUser = smsuser_data;
+						// 	if(smsUser!=null){ //SMS already exists
+						// 		console.log('--- SMS already exists ---'+smsUser.attributes.SMS);
+						// 		var smsMsg = '';
+								
+						// 		if(smsUser.attributes.SMS == user_data.attributes.SMS)
+						// 		{ 
+						// 			attributes['SMS'] = user_data.attributes.SMS;						
+						// 			FinalMsg = "Email was updated successfully.";
+						// 		}
+
+						// 		else if (smsUser.email!=email){
+						// 			var smsMsg = 'but the phone number has been ignored because it already exists';
+						// 			attributes['SMS'] = user_data.attributes.SMS; //smsUser.attributes.SMS; //set existing sms in post
+						// 			FinalMsg = "Email was updated successfully "+smsMsg;
+						// 		}
+						// 	}else {
+						// 		attributes['SMS'] =  attributes.SMS; //set existing sms in post
+						// 		FinalMsg = "Email was updated successfully ";
+						// 	}
+						// });
+
+						//TO DO
+
+						//  var data = [{
+
+						// 	'listid' : { 'id': listArr },
+						// 	'attributes' : attributes,
+						// 	'blacklisted' : blacklisted,
+						// 	'sms_bl' : blacklisted_sms, 
+						// 	'v' : '', //to do
+						// 	'user_history' : [],
+						// 	'id': 48003358, //$usersModel->getMaxID(true); to do
+						// 	'email' : email,
+						// 	'sc' : 0, //to filter new hotmail user 
+						// 	'email_tag' : '', //$this->email_tag($user_email);
+						// 	'shr_key' : '', //$this->shr_key($user_email);
+						// 	'entered' : Utility.formatDate(new Date())
+
+						// }];
+						// console.log(data);
+						// update parames --> users collection
+						// User.insert(req.data.cdb.db_host, req.data.cdb.db_name , data, function(err, log_data){
+						// 	if (err) {
+						// 		console.log(err);
+						// 		console.log("Error:Sorry!Something went Wrong in insertion");
+						// 	}else {
+						// 		return res.json(200, apilogs.jsonResponse(req,res,"success", FinalMsg, []));
+						// 	}
+						// });	
+
 	        		}
-	        		else{ //create user
+	        		else{ //CREATE user
 
 	        			//match input listd ids in list collection, & add all those found
-
-	        			var listCriteria = [{'id': { '$in': listid }, 'list_parent': {'$ne': 0}}, {'id':1}];
+	        			var listCriteria = [{'id': { '$in': listid.listid }, 'list_parent': {'$ne': 0}}, {'id':1}];
 
 				    	Lists.getAll(db_host, db_name , listCriteria, function(err, list_data){
+							//console.log(list_data);
 							list_data.each(function(err, data){
-								console.log('------>'+data);
 								if (data) {
-									//console.log(data.id);
-									listArr = data['url'];
+									listArr = data['id'];
+									console.log(listArr+'-------');
 								}
 							});
 						});	
-				    	console.log(listArr+'@@@@@');
+
+				    	//if SMS, check if already exist, if yes, create new user leaving SMS with a msg, if not add the value in sms attrinute
+						var smsCriteria = [{"attributes.SMS": attributes.SMS}, {}];
+						User.getOne(db_host, db_name , smsCriteria, function(err, smsuser_data){
+							smsUser = smsuser_data;
+							if(smsUser!=null){ //SMS already exists
+								console.log('--- SMS already exists ---'+smsUser.attributes.SMS);
+								var smsMsg = 'but the phone number has been ignored because it already exists';
+								attributes.SMS = ''; //smsUser.attributes.SMS; //set existing sms in post as blank
+								FinalMsg = "User created successfully "+smsMsg;
+							}else{
+								var smsMsg = '';
+								attributes.SMS =  attributes.SMS; //set existing sms in post
+								FinalMsg = "User created successfully ";
+							}
 
 
-	        			console.log('--- create user ---');
-	        			return res.json(200, apilogs.jsonResponse(req,res,"success","User created successfully.", []));
+						});	
+
+						//Get max id & create user
+						User.getMaxID(req.data.cdb.db_host, req.data.cdb.db_name, true, function(err, maxId){
+							
+							var data = {
+
+								'listid' : { 'id' : listArr },  //need to be fixed
+								'attributes' : attributes,
+								'id': maxId,
+								'email' : email,
+								'sc' : 0, //to filter new hotmail user 
+								'email_tag' : apilogs.email_tag(email),
+								'shr_key' : User.shr_key(email),
+								'entered' : Utility.formatDate(date),
+								'blacklisted' : blacklisted,
+							};
+
+						 	if(blacklisted == 0){
+		                        data.user_history = [{'action' : 'AUNSUBS_NO', 'date' : Utility.formatDate(date), 'ip' : ip}]
+		                    }else{
+		                        data.user_history = [{'action' : 'AUNSUBS', 'date' : Utility.formatDate(date), 'ip' : ip}]
+		                    }
+							if(attributes.SMS){
+								if(blacklisted_sms && blacklisted_sms != 0) { 
+									data.sms_bl = 1,
+									data.user_history = [{'action' : 'ASTOP', 'date' : Utility.formatDate(date), 'ip': ip}]
+								}
+
+								//data.v = apilogs.varifyCountry(attributes.SMS)
+								apilogs.varifyCountry(attributes.SMS, function(err, value){
+									if (err) {
+										console.log(err)
+									}
+									else {
+										console.log('getting late value --- '+value);
+										data.v = value //need to be fixed
+									}
+								});
+							}
+
+							console.log(data);
+							//TO DO: add transactional attr creation code
+							//insert : users collection
+							User.insert(req.data.cdb.db_host, req.data.cdb.db_name , data, function(err, log_data){
+								if (err) {
+									console.log("Error: Sorry!Something went Wrong while insertion "+ err);
+								}else {
+									return res.json(200, apilogs.jsonResponse(req,res,"success", FinalMsg, []));
+								}
+							});	
+
+						});
+							
 	        		}
+
 	        	});
 	        }
 
