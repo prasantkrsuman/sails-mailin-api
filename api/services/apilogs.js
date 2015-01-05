@@ -236,7 +236,7 @@ module.exports = {
 	/**
 	* funtion to varify country code in SMS
 	*/
-	varifyCountry: function(mobile, cb) {
+	verifyCountry: function(mobile, cb) {
         if(mobile){
             var filter = [{"status": 1}, {"_id":0, "code":1}];
           
